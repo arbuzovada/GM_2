@@ -1,5 +1,5 @@
 function [G, ind] = ldpc_gen_matrix(H)
-% This function evaluates distribution p(b | a, d)
+% This function produces generator matrix G by given parity-check matrix H.
 % INPUT:
 %    H: (n - k)-by-n binary array, parity-check matrix
 %
