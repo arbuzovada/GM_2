@@ -12,30 +12,24 @@ function [G, ind] = ldpc_gen_matrix(H)
     ind = [];
     cur_e = 1;
     for i = 1 : n
-        if (H(cur_e, i) ~= 1)
-            % find a lower row with a 1 in desired position
-            found = 0;
-            for j = (cur_e + 1) : m
-                if (H(j, i) == 1)
-                    % swap rows
-                    tmp = H(j, :);
-                    H(j, :) = H(cur_e, :);
-                    H(cur_e, :) = tmp;
-                    found = 1;
-                    break;
-                end
-            end
-            if ~found
-                % skip this column
-                continue;
-            end
+        % find a lower row with a 1 in desired position
+        nonzero_row = find(H(cur_e : end, i), 1);
+        if isempty(nonzero_row)
+            % skip this column
+            continue;
         end
+        % true index
+        nonzero_row = nonzero_row + cur_e - 1;
+        % swap rows
+        tmp = H(nonzero_row, :);
+        H(nonzero_row, :) = H(cur_e, :);
+        H(cur_e, :) = tmp;
+        % find other 1s
+        nonzero_rows = find(H(:, i));
+        nonzero_rows = setdiff(nonzero_rows, cur_e);
         % zero everything higher and lower
-        for j = 1 : m
-            if (j ~= cur_e) && (H(j, i) == 1)
-                H(j, :) = xor(H(j, :), H(cur_e, :));
-            end
-        end
+        H(nonzero_rows, :) = xor(H(nonzero_rows, :), ...
+            repmat(H(cur_e, :), size(nonzero_rows, 1), 1));
         ind = [ind, i]; %#ok<AGROW>
         cur_e = cur_e + 1;
         if (cur_e > m)
