@@ -13,7 +13,7 @@ function [G, ind] = ldpc_gen_matrix(H)
     cur_e = 1;
     for i = 1 : n
         if (H(cur_e, i) ~= 1)
-            % find a row with a 1 in desired position
+            % find a lower row with a 1 in desired position
             found = 0;
             for j = (cur_e + 1) : m
                 if (H(j, i) == 1)
@@ -43,9 +43,6 @@ function [G, ind] = ldpc_gen_matrix(H)
         end
     end
     G = zeros(n, k);
-%     size(G(setdiff([1 : n], ind), :))
     G(setdiff([1 : n], ind), :) = eye(k);
-%     size(G(ind, :))
-%     size(H(:, setdiff([1 : n], ind)))
     G(ind, :) = H(:, setdiff([1 : n], ind));
 end
