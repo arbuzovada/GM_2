@@ -13,7 +13,30 @@ function [e, status] = ldpc_decoding(s, H, q, varargin)
 %               2, if max_iter reached
 
     % s = He
-    MAX_ITER = 1000;
+    [m, n] = size(H);
+    
+    PARALLEL = true;
+    LAMBDA = 1;
+    MAX_ITER = 200;
+    EPS = 1e-4;
+    DISPLAY = false;
+    for i = 1 : length(varargin)
+        if strcmp(varargin{i}, 'schedule')
+            PARALLEL = strcmp(varargin{i + 1}, 'parallel');
+        end
+        if strcmp(varargin{i}, 'damping')
+            LAMBDA = varargin{i + 1};
+        end
+        if strcmp(varargin{i}, 'max_iter')
+            MAX_ITER = varargin{i + 1};
+        end
+        if strcmp(varargin{i}, 'eps')
+            EPS = varargin{i + 1};
+        end
+        if strcmp(varargin{i}, 'display')
+            DISPLAY = strcmp(varargin{i + 1}, 'true');
+        end
+    end
     
     % initialization
     mu_vf = q * ones(n, m, 2); % messages from vertice to factor
@@ -28,6 +51,9 @@ function [e, status] = ldpc_decoding(s, H, q, varargin)
             N_j = find(H(j, :));
             for i = 1 : n
                 inds = setdiff(N_j, i);
+                if isempty(inds)
+                    continue;
+                end
                 p_k = mu_vf(inds(1), j);
                 delta = 1 - 2 * mu_vf(inds(1), j);
                 for k = inds(2 : end)
@@ -36,9 +62,11 @@ function [e, status] = ldpc_decoding(s, H, q, varargin)
                     delta = delta * (1 - 2 * mu_vf(inds(1), j));
                 end
                 if ~s(j)
-                    mu_fv(j, i) = (1 - delta) / 2;
+                    mu_fv(j, i) = LAMBDA * (1 - delta) / 2 + ...
+                        (1 - LAMBDA) * mu_fv(j, i);
                 else
-                    mu_fv(j, i) = (1 + delta) / 2;
+                    mu_fv(j, i) = LAMBDA * (1 + delta) / 2 + ...
+                        (1 - LAMBDA) * mu_fv(j, i);
                 end
             end
         end
@@ -46,13 +74,19 @@ function [e, status] = ldpc_decoding(s, H, q, varargin)
         for i = 1 : n
             N_i = find(H(:, i));
             for j = 1 : m
-                mu_vf(i, j, 1) = (1 - q) * ...
-                    prod(1 - mu_fv(setdiff(N_i, j), i));
-                mu_vf(i, j, 2) = q * prod(mu_fv(setdiff(N_i, j), i));
+                mu_vf(i, j, 1) = LAMBDA * (1 - q) * ...
+                    prod(1 - mu_fv(setdiff(N_i, j), i)) + ...
+                    (1 - LAMBDA) * mu_vf(i, j, 1);
+                mu_vf(i, j, 2) = LAMBDA * q * ...
+                    prod(mu_fv(setdiff(N_i, j), i)) + ...
+                    (1 - LAMBDA) * mu_vf(i, j, 2);
             end
             b(i, 1) = (1 - q) * prod(1 - mu_fv(N_i, i));
             b(i, 2) = q * prod(mu_fv(N_i, i));
         end
+        % normalize
+        mu_vf = mu_vf ./ (repmat(mu_vf(:, :, 1) + mu_vf(:, :, 2), ...
+            [1, 1, 2]));
         [~, e] = max(b, [], 2);
         e = e - 1;
         % check stopping criteria
