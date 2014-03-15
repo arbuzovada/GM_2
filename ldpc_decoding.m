@@ -9,7 +9,7 @@ function [e, status] = ldpc_decoding(s, H, q, varargin)
 %    e: n-by-1 binary array, error vector
 %    status: result of decoding
 %               0, if OK;
-%               1, if beliefs didn't converge;
+%               1, if beliefs converged;
 %               2, if max_iter reached
 
     % s = He
@@ -46,21 +46,27 @@ function [e, status] = ldpc_decoding(s, H, q, varargin)
     b_old = zeros(n, 2); % beliefs
     
     for t = 1 : MAX_ITER
+        if DISPLAY
+            fprintf('Iteration %d\n', t);
+        end
+%         fprintf('before: NaN sums %d, %d\n', sum(sum(isnan(mu_fv))), ...
+%             sum(sum(sum(isnan(mu_vf)))));
+
         % factor to vertice recalculation
         for j = 1 : m
             N_j = find(H(j, :));
-            for i = 1 : n
+            for i = N_j
                 inds = setdiff(N_j, i);
                 if isempty(inds)
                     continue;
                 end
-                p_k = mu_vf(inds(1), j);
-                delta = 1 - 2 * mu_vf(inds(1), j);
-                for k = inds(2 : end)
-                    p_k = p_k * mu_vf(k, j) + ...
-                        (1 - p_k) * (1 - mu_vf(k, j));
-                    delta = delta * (1 - 2 * mu_vf(inds(1), j));
-                end
+                delta = prod(1 - 2 * mu_vf(inds, j));
+%                 p_k = mu_vf(inds(1), j);
+%                 for k = inds
+%                     p_k = p_k * mu_vf(k, j) + ...
+%                         (1 - p_k) * (1 - mu_vf(k, j));
+%                     delta = delta * (1 - 2 * mu_vf(k, j));
+%                 end
                 if ~s(j)
                     mu_fv(j, i) = LAMBDA * (1 - delta) / 2 + ...
                         (1 - LAMBDA) * mu_fv(j, i);
@@ -73,7 +79,7 @@ function [e, status] = ldpc_decoding(s, H, q, varargin)
         % vertice to factor and beliefs recalculation
         for i = 1 : n
             N_i = find(H(:, i));
-            for j = 1 : m
+            for j = N_i'
                 mu_vf(i, j, 1) = LAMBDA * (1 - q) * ...
                     prod(1 - mu_fv(setdiff(N_i, j), i)) + ...
                     (1 - LAMBDA) * mu_vf(i, j, 1);
@@ -89,12 +95,15 @@ function [e, status] = ldpc_decoding(s, H, q, varargin)
             [1, 1, 2]));
         [~, e] = max(b, [], 2);
         e = e - 1;
+%         [mod(H * e, 2)'; s']
         % check stopping criteria
-        if (H * e == s)
+        [mod(H * e, 2)'; s']
+        if (mod(H * e, 2) == s)
             status = 0;
             return;
         end
         if (max(b - b_old) < EPS)
+%             [b_old, b]
             status = 1;
             return;
         end
