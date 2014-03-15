@@ -2,7 +2,7 @@
 % k = 4;
 k = 10;
 n = 50;
-q = 0.01;
+q = 0.1;
 m = n - k;
 
 H = make_ldpc_mex(m, n, 3);
@@ -13,15 +13,14 @@ assert(rank(full(H)) == m)
 % mod(H * G, 2)
 
 % gen messages:
-nmes = 1;
+nmes = 100;
 U = randi(2, k, nmes) - 1;
 % encode:
 V = mod(G * U, 2);
 % make errors:
 W = V;
-q = 0.01;
 E = binornd(1, q, size(W));
-% W = xor(V, E);
+W = xor(V, E);
 % decode:
 V1 = W;
 success = 0;
