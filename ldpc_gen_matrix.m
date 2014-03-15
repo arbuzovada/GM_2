@@ -36,7 +36,7 @@ function [G, ind] = ldpc_gen_matrix(H)
             break;
         end
     end
-    G = zeros(n, k);
+    G = sparse(n, k);
     G(setdiff([1 : n], ind), :) = eye(k);
     G(ind, :) = H(:, setdiff([1 : n], ind));
     ind = setdiff([1 : n], ind);
