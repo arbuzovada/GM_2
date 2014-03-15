@@ -43,6 +43,14 @@ function [e, status] = ldpc_decoding(s, H, q, varargin)
     mu_fv = zeros(m, n); % messages from factor to vertice for e_i = 1
     b = zeros(n, 2); % beliefs
     b_old = zeros(n, 2);
+    N_i = cell(n, 1);
+    for i = 1 : n
+        N_i{i} = find(H(:, i));
+    end
+    N_j = cell(m, 1);
+    for j = 1 : m
+        N_j{j} = find(H(j, :));
+    end
     
     for t = 1 : MAX_ITER
         if DISPLAY
@@ -51,30 +59,28 @@ function [e, status] = ldpc_decoding(s, H, q, varargin)
 
         % factor to vertice recalculation
         for j = 1 : m
-            N_j = find(H(j, :));
-            mask = (eye(length(N_j)) == 0);
-            cur = repmat(N_j, length(N_j), 1)';
+            mask = (eye(length(N_j{j})) == 0);
+            cur = repmat(N_j{j}, length(N_j{j}), 1)';
             inds = cur(mask);
             delta = prod(1 - 2 * reshape(mu_vf(inds, j, 2), ...
-                length(N_j) - 1, length(N_j)), 1);
-            mu_fv(j, N_j) = LAMBDA * (1 + (2 * s(j) - 1) * delta) / 2 + ...
-                (1 - LAMBDA) * mu_fv(j, N_j);
+                length(N_j{j}) - 1, length(N_j{j})), 1);
+            mu_fv(j, N_j{j}) = LAMBDA * (1 + (2 * s(j) - 1) * delta) / 2 + ...
+                (1 - LAMBDA) * mu_fv(j, N_j{j});
         end
         
         % vertice to factor and beliefs recalculation
         for i = 1 : n
-            N_i = find(H(:, i));
-            mask = (eye(length(N_i)) == 0);
-            cur = repmat(N_i, 1, length(N_i));
+            mask = (eye(length(N_i{i})) == 0);
+            cur = repmat(N_i{i}, 1, length(N_i{i}));
             inds = cur(mask);
-            mu_vf(i, N_i, 1) = LAMBDA * (1 - q) * ...
-                prod(1 - reshape(mu_fv(inds, i), length(N_i) - 1, ...
-                length(N_i)), 1) + (1 - LAMBDA) * mu_vf(i, N_i, 1);
-            mu_vf(i, N_i, 2) = LAMBDA * q * ...
-                prod(reshape(mu_fv(inds, i), length(N_i) - 1, ...
-                length(N_i)), 1) + (1 - LAMBDA) * mu_vf(i, N_i, 2);
-            b(i, 1) = (1 - q) * prod(1 - mu_fv(N_i, i));
-            b(i, 2) = q * prod(mu_fv(N_i, i));
+            mu_vf(i, N_i{i}, 1) = LAMBDA * (1 - q) * ...
+                prod(1 - reshape(mu_fv(inds, i), length(N_i{i}) - 1, ...
+                length(N_i{i})), 1) + (1 - LAMBDA) * mu_vf(i, N_i{i}, 1);
+            mu_vf(i, N_i{i}, 2) = LAMBDA * q * ...
+                prod(reshape(mu_fv(inds, i), length(N_i{i}) - 1, ...
+                length(N_i{i})), 1) + (1 - LAMBDA) * mu_vf(i, N_i{i}, 2);
+            b(i, 1) = (1 - q) * prod(1 - mu_fv(N_i{i}, i));
+            b(i, 2) = q * prod(mu_fv(N_i{i}, i));
         end
         
         % normalize
