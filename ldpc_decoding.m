@@ -60,7 +60,7 @@ function [e, status] = ldpc_decoding(s, H, q, varargin)
                 if isempty(inds)
                     continue;
                 end
-                delta = prod(1 - 2 * mu_vf(inds, j));
+                delta = prod(1 - 2 * mu_vf(inds, j, 2));
 %                 p_k = mu_vf(inds(1), j);
 %                 for k = inds
 %                     p_k = p_k * mu_vf(k, j) + ...
@@ -80,11 +80,15 @@ function [e, status] = ldpc_decoding(s, H, q, varargin)
         for i = 1 : n
             N_i = find(H(:, i));
             for j = N_i'
+                inds = setdiff(N_i, j);
+                if isempty(inds)
+                    continue;
+                end
                 mu_vf(i, j, 1) = LAMBDA * (1 - q) * ...
-                    prod(1 - mu_fv(setdiff(N_i, j), i)) + ...
+                    prod(1 - mu_fv(inds, i)) + ...
                     (1 - LAMBDA) * mu_vf(i, j, 1);
                 mu_vf(i, j, 2) = LAMBDA * q * ...
-                    prod(mu_fv(setdiff(N_i, j), i)) + ...
+                    prod(mu_fv(inds, i)) + ...
                     (1 - LAMBDA) * mu_vf(i, j, 2);
             end
             b(i, 1) = (1 - q) * prod(1 - mu_fv(N_i, i));
@@ -97,7 +101,6 @@ function [e, status] = ldpc_decoding(s, H, q, varargin)
         e = e - 1;
 %         [mod(H * e, 2)'; s']
         % check stopping criteria
-        [mod(H * e, 2)'; s']
         if (mod(H * e, 2) == s)
             status = 0;
             return;
