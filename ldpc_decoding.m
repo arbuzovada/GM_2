@@ -48,14 +48,16 @@ function [e, status] = ldpc_decoding(s, H, q, varargin)
     for i = 1 : n
         N_i{i} = find(H(:, i));
         if (~PARALLEL)
-            ind_list = [ind_list; -[repmat(i, length(N_i{i}), 1), N_i{i}]]; %#ok<AGROW>
+            ind_list = [ind_list; ...
+                -[repmat(i, length(N_i{i}), 1), N_i{i}]]; %#ok<AGROW>
         end
     end
     N_j = cell(m, 1);
     for j = 1 : m
         N_j{j} = find(H(j, :));
         if (~PARALLEL)
-            ind_list = [ind_list; [repmat(j, length(N_j{j}), 1), N_j{j}']]; %#ok<AGROW>
+            ind_list = [ind_list; ...
+                [repmat(j, length(N_j{j}), 1), N_j{j}']]; %#ok<AGROW>
         end
     end
     
@@ -64,7 +66,7 @@ function [e, status] = ldpc_decoding(s, H, q, varargin)
             fprintf('Iteration %d\n', t);
         end
         
-        if PARALLEL
+        if PARALLEL || t == 1
             % factor to vertice recalculation
             for j = 1 : m
                 mask = (eye(length(N_j{j})) == 0);
@@ -72,7 +74,8 @@ function [e, status] = ldpc_decoding(s, H, q, varargin)
                 inds = cur(mask);
                 delta = prod(1 - 2 * reshape(mu_vf(inds, j, 2), ...
                     length(N_j{j}) - 1, length(N_j{j})), 1);
-                mu_fv(j, N_j{j}) = LAMBDA * (1 + (2 * s(j) - 1) * delta) / 2 + ...
+                mu_fv(j, N_j{j}) = ...
+                    LAMBDA * (1 + (2 * s(j) - 1) * delta) / 2 + ...
                     (1 - LAMBDA) * mu_fv(j, N_j{j});
             end
 
@@ -82,11 +85,13 @@ function [e, status] = ldpc_decoding(s, H, q, varargin)
                 cur = repmat(N_i{i}, 1, length(N_i{i}));
                 inds = cur(mask);
                 mu_vf(i, N_i{i}, 1) = LAMBDA * (1 - q) * ...
-                    prod(1 - reshape(mu_fv(inds, i), length(N_i{i}) - 1, ...
-                    length(N_i{i})), 1) + (1 - LAMBDA) * mu_vf(i, N_i{i}, 1);
+                    prod(1 - reshape(mu_fv(inds, i), ...
+                    length(N_i{i}) - 1, length(N_i{i})), 1) + ...
+                    (1 - LAMBDA) * mu_vf(i, N_i{i}, 1);
                 mu_vf(i, N_i{i}, 2) = LAMBDA * q * ...
                     prod(reshape(mu_fv(inds, i), length(N_i{i}) - 1, ...
-                    length(N_i{i})), 1) + (1 - LAMBDA) * mu_vf(i, N_i{i}, 2);
+                    length(N_i{i})), 1) + ...
+                    (1 - LAMBDA) * mu_vf(i, N_i{i}, 2);
                 b(i, 1) = (1 - q) * prod(1 - mu_fv(N_i{i}, i));
                 b(i, 2) = q * prod(mu_fv(N_i{i}, i));
             end
@@ -103,7 +108,8 @@ function [e, status] = ldpc_decoding(s, H, q, varargin)
                     i = cur_list(k, 2);
                     inds = setdiff(N_j{j}, i);
                     delta = prod(1 - 2 * mu_vf(inds, j, 2));
-                    mu_fv(j, i) = LAMBDA * (1 + (2 * s(j) - 1) * delta) / 2 + ...
+                    mu_fv(j, i) = ...
+                        LAMBDA * (1 + (2 * s(j) - 1) * delta) / 2 + ...
                         (1 - LAMBDA) * mu_fv(j, i);
                 else
                     % vertice to factor and beliefs recalculation
@@ -116,6 +122,7 @@ function [e, status] = ldpc_decoding(s, H, q, varargin)
                     mu_vf(i, j, 2) = LAMBDA * q * ...
                         prod(mu_fv(inds, i)) + ...
                         (1 - LAMBDA) * mu_vf(i, j, 2);
+                    mu_vf(i, j, :) = mu_vf(i, j, :) ./ sum(mu_vf(i, j, :));
                 end
             end
             for i = 1 : n
