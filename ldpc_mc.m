@@ -3,12 +3,12 @@ function [err_bit, err_block, diver] = ldpc_mc(H, q, num_points)
 % INPUT:
 %    H: m-by-n binary array, parity-check matrix
 %    q: double in (0; 0.5), the probability of bit inversion
-%    num_points: integer, nubmer of experiments
+%    num_points: integer, number of experiments
 %
 % OUTPUT:
 %    err_bit: probability of bit error
 %    err_block: probability of block error
-%    diver: didn't converge
+%    diver: probability of divergence
 
     [m, n] = size(H);
     k = n - m;
@@ -27,11 +27,11 @@ function [err_bit, err_block, diver] = ldpc_mc(H, q, num_points)
     diver = 0;
     for i = 1 : num_points
         [e, status] = ldpc_decoding(mod(H * W(:, i), 2), H, q, ...
-            'display', 'false', 'lambda', 0.5);
-        if status < 2
-            err_bit = err_bit + sum(e ~= E(:, i));
-            err_block = err_block + any(e ~= E(:, i));
-        else
+            'display', 'false', 'damping', 7/8, 'schedule', 'parallel', ...
+            'max_iter', 200);
+        err_bit = err_bit + sum(e ~= E(:, i));
+        err_block = err_block + any(e ~= E(:, i));
+        if status == 2
             diver = diver + 1;
         end
     end

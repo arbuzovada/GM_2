@@ -131,6 +131,7 @@ function [e, status] = ldpc_decoding(s, H, q, varargin)
             end 
         end
         
+        b = b ./ repmat(b(:, 1) + b(:, 2), 1, 2);
         [~, e] = max(b, [], 2);
         e = e - 1;
         % check stopping criteria
@@ -138,7 +139,7 @@ function [e, status] = ldpc_decoding(s, H, q, varargin)
             status = 0;
             return;
         end
-        if (max(b - b_old) < EPS)
+        if (max(abs(b - b_old)) < EPS)
             status = 1;
             return;
         end
